@@ -12,5 +12,14 @@ type cacheEntry struct {
 
 type Cache struct {
 	entries map[string]cacheEntry
+	interval time.Duration
 	mu sync.Mutex
+}
+
+
+func NewCache(interval time.Duration) *Cache {
+	return &Cache{
+		entries: nil,
+		interval: interval,
+	}
 }
