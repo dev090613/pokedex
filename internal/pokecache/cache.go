@@ -6,7 +6,7 @@ import (
 )
 
 type cacheEntry struct {
-	createAt time.Time
+	createdAt time.Time
 	val []byte
 }
 
@@ -17,10 +17,13 @@ type Cache struct {
 }
 
 func NewCache(interval time.Duration) *Cache {
-	return &Cache{
-		entries: nil,
+	cache := &Cache{
+		entries: make(map[string]cacheEntry),
 		interval: interval,
 	}
+	go cache.reapLoop()
+
+	return cache
 }
 
 func (c *Cache) Add(key string, val []byte) {
@@ -28,7 +31,7 @@ func (c *Cache) Add(key string, val []byte) {
 	defer c.mu.Unlock()
 
 	c.entries[key] = cacheEntry{
-		createAt: time.Now(),
+		createdAt: time.Now(),
 		val: val,
 	}
 } 
@@ -42,5 +45,25 @@ func (c *Cache) Get(key string) ([]byte, bool) {
 		return nil, false
 	}
 	return entry.val, true
+}
+
+func (c *Cache) reapLoop() {
+	ticker := time.NewTicker(c.interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		c.reap()
+	}
+}
+
+func (c *Cache) reap() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for key, entry := range c.entries {
+		if time.Since(entry.createdAt) > c.interval {
+			delete(c.entries, key)
+		}
+	}
 }
 
