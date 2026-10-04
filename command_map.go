@@ -16,13 +16,6 @@ func commandMap(cfg *config) error {
 		url = *cfg.Next
 	}
 
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
 	var result struct {
 		Next		*string	`json:"next"`
 		Previous	*string	`json:"previous"`
@@ -32,17 +25,34 @@ func commandMap(cfg *config) error {
 		} `json:"results"`
 	}
 
-	jsonData, err := io.ReadAll(resp.Body)
+	raw, hit := cfg.Cache.Get(url)
+	if !hit {
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		}
+		if resp.StatusCode == http.StatusOK {
+			jsonData, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+			raw = jsonData
+		}
+
+
+		cfg.Cache.Add(url, raw)
+	}
+
+	err := json.Unmarshal(raw, &result)
 	if err != nil {
 		return err
 	}
-
-	err = json.Unmarshal(jsonData, &result)
-	if err != nil {
-		return err
-	}
-
-	// fmt.Println(url)
 
 	for _, res := range result.Results {
 		fmt.Println(res.Name)
