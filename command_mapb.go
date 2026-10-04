@@ -9,25 +9,12 @@ import (
 )
 
 func commandMapb(cfg *config) error {
-
 	var url string
 	if (cfg.Previous == nil) {
 		fmt.Println("you're on the first page")
 		return nil
 	} else { 
 		url = *cfg.Previous
-	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	jsonData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
 	}
 
 	var result struct {
@@ -38,7 +25,30 @@ func commandMapb(cfg *config) error {
 			URL string `json:"url"`
 		} `json:"results"`
 	}
-	err = json.Unmarshal(jsonData, &result)
+
+	raw, hit := cfg.Cache.Get(url)
+	if !hit {
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		}
+		if resp.StatusCode == http.StatusOK {
+			jsonData, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+			raw = jsonData
+		}
+		cfg.Cache.Add(url, raw)
+	}
+
+	err := json.Unmarshal(raw, &result)
 	if err != nil {
 		return err
 	}
