@@ -43,6 +43,11 @@ func getCommand() map[string]cliCommand {
 			description: "Displays the names of previous 20 location areas",
 			callback: commandMapb,
 		},
+		"explore": {
+			name: "explore",
+			description: "Display a lot more information about the location area",
+			callback: commandExplore,
+		},
 	}
 }
 
@@ -56,17 +61,18 @@ func startRepl(cfg *config) {
 		}
 
 		input := scanner.Text()
-		if len(input) == 0  {
+
+		tokens := cleanInput(input)
+		if len(tokens) == 0 {
 			continue
 		}
-		token := cleanInput(input)[0]
 
-		cmd, exists := cfg.commands[token]
+		cmd, exists := cfg.commands[tokens[0]]
 		if !exists {
 			fmt.Println("Unknown command")
 			continue
 		}
-		err := cmd.callback(cfg)
+		err := cmd.callback(cfg, tokens[1:]...)
 		if err != nil {
 			fmt.Println(err)
 		}

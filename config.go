@@ -5,7 +5,7 @@ import "github.com/dev090613/pokedexcli/internal/pokecache"
 type cliCommand struct {
     name		string
     description	string
-    callback	func(*config) error
+    callback	func(*config, ...string) error
 }
 
 type config struct {

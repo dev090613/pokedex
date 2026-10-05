@@ -1,29 +1,28 @@
-// command_mapb.go
 package main
 
 import (
 	"fmt"
 	"net/http"
-	"encoding/json"
 	"io"
+	"encoding/json"
 )
 
-func commandMapb(cfg *config, args ...string) error {
-	var url string
-	if (cfg.Previous == nil) {
-		fmt.Println("you're on the first page")
-		return nil
-	} else { 
-		url = *cfg.Previous
+func commandExplore(cfg *config, args ...string) error {
+	if 1 > len(args) {
+		return fmt.Errorf("please pass args")
 	}
 
+	url := "https://pokeapi.co/api/v2/location-area"
+	area := args[0]
+
+	url = fmt.Sprintf("%s/%s", url, area)
+
 	var result struct {
-		Next *string `json:"next"`
-		Previous *string `json:"previous"`
-		Results []struct{
-			Name string `json:"name"`
-			URL string `json:"url"`
-		} `json:"results"`
+		Pokemon_encounters []struct{
+			Pokemon		struct {
+				Name	string `json:"name"`
+			} `json:"pokemon"`
+		} `json:"pokemon_encounters"`
 	}
 
 	raw, hit := cfg.Cache.Get(url)
@@ -53,12 +52,9 @@ func commandMapb(cfg *config, args ...string) error {
 		return err
 	}
 
-	for _, res := range result.Results {
-		fmt.Println(res.Name)
+	for _, encounter := range result.Pokemon_encounters {
+		fmt.Println(encounter.Pokemon.Name)
 	}
-
-	cfg.Next = result.Next
-	cfg.Previous = result.Previous
 
 	return nil
 }
